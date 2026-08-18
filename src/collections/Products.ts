@@ -4,8 +4,8 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
-    // 'images' added first so thumbnails appear in the list view table
-    defaultColumns: ['images', 'title', 'slug', 'price', 'updatedAt'],
+    // Order: Title (clickable to product), Images (not clickable), Price, Slug, Updated At
+    defaultColumns: ['title', 'images', 'price', 'slug', 'updatedAt'],
   },
   access: {
     read: () => true,

@@ -500,135 +500,6 @@ export const GET = async (request: Request) => {
 }
 </file>
 
-<file path="src/collections/Products.ts">
-import type { CollectionConfig } from 'payload'
-
-export const Products: CollectionConfig = {
-  slug: 'products',
-  admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'price', 'updatedAt'],
-  },
-  access: {
-    read: () => true,
-  },
-  fields: [
-    {
-      type: 'tabs',
-      tabs: [
-        {
-          label: 'Product Details',
-          fields: [
-            {
-              name: 'title',
-              type: 'text',
-              required: true,
-            },
-            {
-              name: 'slug',
-              type: 'text',
-              required: true,
-              unique: true,
-              admin: {
-                position: 'sidebar',
-              },
-              hooks: {
-                beforeValidate: [
-                  ({ value, siblingData }) => {
-                    // Auto-generate slug from title if left empty
-                    if (!value && siblingData?.title) {
-                      return siblingData.title
-                        .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/(^-|-$)+/g, '')
-                    }
-                    return value
-                  },
-                ],
-              },
-            },
-            {
-              name: 'price',
-              type: 'number',
-              required: true,
-              min: 0,
-            },
-            {
-              name: 'images',
-              type: 'upload',
-              relationTo: 'media',
-              hasMany: true,
-              admin: {
-                description: 'Upload product images or select existing media from library',
-              },
-            },
-            {
-              name: 'description',
-              type: 'richText',
-            },
-            {
-              name: 'customAttributes',
-              type: 'array',
-              label: 'Custom Specifications',
-              fields: [
-                {
-                  name: 'key',
-                  type: 'text',
-                  label: 'Attribute Name (e.g., Material, Color, Warranty)',
-                  required: true,
-                },
-                {
-                  name: 'value',
-                  type: 'text',
-                  label: 'Attribute Value',
-                  required: true,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          label: 'Technical SEO',
-          fields: [
-            {
-              name: 'metaTitle',
-              type: 'text',
-              label: 'Meta Title',
-            },
-            {
-              name: 'metaDescription',
-              type: 'textarea',
-              label: 'Meta Description',
-            },
-            {
-              name: 'canonicalURL',
-              type: 'text',
-              label: 'Canonical URL',
-            },
-            {
-              name: 'metaRobots',
-              type: 'select',
-              defaultValue: 'index, follow',
-              options: [
-                { label: 'Index, Follow', value: 'index, follow' },
-                { label: 'Noindex, Follow', value: 'noindex, follow' },
-                { label: 'Index, Nofollow', value: 'index, nofollow' },
-                { label: 'Noindex, Nofollow', value: 'noindex, nofollow' },
-              ],
-            },
-            {
-              name: 'schemaMarkup',
-              type: 'json',
-              label: 'JSON-LD Schema Markup',
-            },
-          ],
-        },
-      ],
-    },
-  ],
-}
-</file>
-
 <file path="tests/e2e/admin.e2e.spec.ts">
 import { test, expect, Page } from '@playwright/test'
 import { login } from '../helpers/login'
@@ -1220,6 +1091,137 @@ export const importMap = {
 }
 </file>
 
+<file path="src/collections/Products.ts">
+import type { CollectionConfig } from 'payload'
+
+export const Products: CollectionConfig = {
+  slug: 'products',
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['images', 'title', 'slug', 'price', 'updatedAt'], // Added 'images' column
+  },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+  fields: [
+    {
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Product Details',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+            },
+            {
+              name: 'slug',
+              type: 'text',
+              required: true,
+              unique: true,
+              admin: {
+                position: 'sidebar',
+              },
+              hooks: {
+                beforeValidate: [
+                  ({ value, siblingData }) => {
+                    if (!value && siblingData?.title) {
+                      return siblingData.title
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)+/g, '')
+                    }
+                    return value
+                  },
+                ],
+              },
+            },
+            {
+              name: 'price',
+              type: 'number',
+              required: true,
+              min: 0,
+            },
+            {
+              name: 'images',
+              type: 'upload',
+              relationTo: 'media',
+              hasMany: true,
+              admin: {
+                description: 'Upload product images or select existing media from library',
+              },
+            },
+            {
+              name: 'description',
+              type: 'richText',
+            },
+            {
+              name: 'customAttributes',
+              type: 'array',
+              label: 'Custom Specifications',
+              fields: [
+                {
+                  name: 'key',
+                  type: 'text',
+                  label: 'Attribute Name (e.g., Material, Color, Warranty)',
+                  required: true,
+                },
+                {
+                  name: 'value',
+                  type: 'text',
+                  label: 'Attribute Value',
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Technical SEO',
+          fields: [
+            {
+              name: 'metaTitle',
+              type: 'text',
+              label: 'Meta Title',
+            },
+            {
+              name: 'metaDescription',
+              type: 'textarea',
+              label: 'Meta Description',
+            },
+            {
+              name: 'canonicalURL',
+              type: 'text',
+              label: 'Canonical URL',
+            },
+            {
+              name: 'metaRobots',
+              type: 'select',
+              defaultValue: 'index, follow',
+              options: [
+                { label: 'Index, Follow', value: 'index, follow' },
+                { label: 'Noindex, Follow', value: 'noindex, follow' },
+                { label: 'Index, Nofollow', value: 'index, nofollow' },
+                { label: 'Noindex, Nofollow', value: 'noindex, nofollow' },
+              ],
+            },
+            {
+              name: 'schemaMarkup',
+              type: 'json',
+              label: 'JSON-LD Schema Markup',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+</file>
+
 <file path="src/collections/Users.ts">
 import type { CollectionConfig } from 'payload'
 
@@ -1243,6 +1245,58 @@ export const Users: CollectionConfig = {
       required: true,
     },
   ],
+}
+</file>
+
+<file path="tests/helpers/seedUser.ts">
+// tests/helpers/seedUser.ts
+
+import { getPayload } from 'payload'
+import config from '../../src/payload.config.js'
+
+export const testUser = {
+  email: 'dev@payloadcms.com',
+  password: 'test',
+}
+
+/**
+ * Seeds a test user for e2e admin tests.
+ */
+export async function seedTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  // Delete existing test user if any
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
+
+  // Create fresh test user
+  await payload.create({
+    collection: 'users',
+    data: testUser,
+    draft: true,
+  })
+}
+
+/**
+ * Cleans up test user after tests
+ */
+export async function cleanupTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
 }
 </file>
 
@@ -1783,55 +1837,41 @@ export default buildConfig({
 })
 </file>
 
-<file path="tests/helpers/seedUser.ts">
-// tests/helpers/seedUser.ts
-
-import { getPayload } from 'payload'
-import config from '../../src/payload.config.js'
-
-export const testUser = {
-  email: 'dev@payloadcms.com',
-  password: 'test',
-}
-
-/**
- * Seeds a test user for e2e admin tests.
- */
-export async function seedTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  // Delete existing test user if any
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@payload-config": ["./src/payload.config.ts"]
     },
-  })
-
-  // Create fresh test user
-  await payload.create({
-    collection: 'users',
-    data: testUser,
-    draft: true,
-  })
-}
-
-/**
- * Cleans up test user after tests
- */
-export async function cleanupTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
+    "target": "ES2022"
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "tests"]
 }
 </file>
 
@@ -1954,44 +1994,6 @@ export const Media: CollectionConfig = {
       },
     },
   ],
-}
-</file>
-
-<file path="tsconfig.json">
-{
-  "compilerOptions": {
-    "ignoreDeprecations": "5.0",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"],
-      "@payload-config": ["./src/payload.config.ts"]
-    },
-    "target": "ES2022"
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": ["node_modules", "tests"]
 }
 </file>
 
