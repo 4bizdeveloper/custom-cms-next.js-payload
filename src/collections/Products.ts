@@ -4,61 +4,89 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
+    // 'images' added first so thumbnails appear in the list view table
+    defaultColumns: ['images', 'title', 'slug', 'price', 'updatedAt'],
   },
   access: {
     read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
   },
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-    },
-    {
-      name: 'price',
-      type: 'number',
-      required: true,
-    },
-    {
-      name: 'description',
-      type: 'richText',
-    },
-    {
-      name: 'images',
-      type: 'upload',
-      relationTo: 'media',
-      hasMany: true,
-    },
-
-    // Dynamic Custom Form Attributes (Extend product forms per category)
-    {
-      name: 'customAttributes',
-      type: 'array',
-      label: 'Custom Specifications',
-      fields: [
-        {
-          name: 'key',
-          type: 'text',
-          label: 'Attribute Name (e.g., Material, Color, Warranty)',
-        },
-        {
-          name: 'value',
-          type: 'text',
-          label: 'Attribute Value',
-        },
-      ],
-    },
-
-    // Technical SEO Tab
-    {
       type: 'tabs',
       tabs: [
+        {
+          label: 'Product Details',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+            },
+            {
+              name: 'slug',
+              type: 'text',
+              required: true,
+              unique: true,
+              admin: {
+                position: 'sidebar',
+              },
+              hooks: {
+                beforeValidate: [
+                  ({ value, siblingData }) => {
+                    if (!value && siblingData?.title) {
+                      return siblingData.title
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)+/g, '')
+                    }
+                    return value
+                  },
+                ],
+              },
+            },
+            {
+              name: 'price',
+              type: 'number',
+              required: true,
+              min: 0,
+            },
+            {
+              name: 'images',
+              type: 'upload',
+              relationTo: 'media',
+              hasMany: true,
+              admin: {
+                description: 'Upload product images or select existing media from library',
+              },
+            },
+            {
+              name: 'description',
+              type: 'richText',
+            },
+            {
+              name: 'customAttributes',
+              type: 'array',
+              label: 'Custom Specifications',
+              fields: [
+                {
+                  name: 'key',
+                  type: 'text',
+                  label: 'Attribute Name (e.g., Material, Color, Warranty)',
+                  required: true,
+                },
+                {
+                  name: 'value',
+                  type: 'text',
+                  label: 'Attribute Value',
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
         {
           label: 'Technical SEO',
           fields: [

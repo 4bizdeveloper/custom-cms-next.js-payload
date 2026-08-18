@@ -157,6 +157,10 @@ export interface Product {
   title: string;
   slug: string;
   price: number;
+  /**
+   * Upload product images or select existing media from library
+   */
+  images?: (number | Media)[] | null;
   description?: {
     root: {
       type: string;
@@ -172,11 +176,10 @@ export interface Product {
     };
     [k: string]: unknown;
   } | null;
-  images?: (number | Media)[] | null;
   customAttributes?:
     | {
-        key?: string | null;
-        value?: string | null;
+        key: string;
+        value: string;
         id?: string | null;
       }[]
     | null;
@@ -202,7 +205,10 @@ export interface Product {
  */
 export interface Media {
   id: number;
-  alt: string;
+  /**
+   * Optional image description for SEO and accessibility.
+   */
+  alt?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -345,8 +351,8 @@ export interface ProductsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   price?: T;
-  description?: T;
   images?: T;
+  description?: T;
   customAttributes?:
     | T
     | {

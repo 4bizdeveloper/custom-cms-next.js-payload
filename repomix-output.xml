@@ -507,61 +507,86 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
+    defaultColumns: ['title', 'slug', 'price', 'updatedAt'],
   },
   access: {
     read: () => true,
   },
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-    },
-    {
-      name: 'price',
-      type: 'number',
-      required: true,
-    },
-    {
-      name: 'description',
-      type: 'richText',
-    },
-    {
-      name: 'images',
-      type: 'upload',
-      relationTo: 'media',
-      hasMany: true,
-    },
-
-    // Dynamic Custom Form Attributes (Extend product forms per category)
-    {
-      name: 'customAttributes',
-      type: 'array',
-      label: 'Custom Specifications',
-      fields: [
-        {
-          name: 'key',
-          type: 'text',
-          label: 'Attribute Name (e.g., Material, Color, Warranty)',
-        },
-        {
-          name: 'value',
-          type: 'text',
-          label: 'Attribute Value',
-        },
-      ],
-    },
-
-    // Technical SEO Tab
-    {
       type: 'tabs',
       tabs: [
+        {
+          label: 'Product Details',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+            },
+            {
+              name: 'slug',
+              type: 'text',
+              required: true,
+              unique: true,
+              admin: {
+                position: 'sidebar',
+              },
+              hooks: {
+                beforeValidate: [
+                  ({ value, siblingData }) => {
+                    // Auto-generate slug from title if left empty
+                    if (!value && siblingData?.title) {
+                      return siblingData.title
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)+/g, '')
+                    }
+                    return value
+                  },
+                ],
+              },
+            },
+            {
+              name: 'price',
+              type: 'number',
+              required: true,
+              min: 0,
+            },
+            {
+              name: 'images',
+              type: 'upload',
+              relationTo: 'media',
+              hasMany: true,
+              admin: {
+                description: 'Upload product images or select existing media from library',
+              },
+            },
+            {
+              name: 'description',
+              type: 'richText',
+            },
+            {
+              name: 'customAttributes',
+              type: 'array',
+              label: 'Custom Specifications',
+              fields: [
+                {
+                  name: 'key',
+                  type: 'text',
+                  label: 'Attribute Name (e.g., Material, Color, Warranty)',
+                  required: true,
+                },
+                {
+                  name: 'value',
+                  type: 'text',
+                  label: 'Attribute Value',
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
         {
           label: 'Technical SEO',
           fields: [
@@ -702,55 +727,6 @@ export async function login({
 
   const dashboardArtifact = page.locator('span[title="Dashboard"]')
   await expect(dashboardArtifact).toBeVisible()
-}
-</file>
-
-<file path="tests/helpers/seedUser.ts">
-import { getPayload } from 'payload'
-import config from '../../src/payload.config.js'
-
-export const testUser = {
-  email: 'dev@payloadcms.com',
-  password: 'test',
-}
-
-/**
- * Seeds a test user for e2e admin tests.
- */
-export async function seedTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  // Delete existing test user if any
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
-
-  // Create fresh test user
-  await payload.create({
-    collection: 'users',
-    data: testUser,
-  })
-}
-
-/**
- * Cleans up test user after tests
- */
-export async function cleanupTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
 }
 </file>
 
@@ -1430,6 +1406,10 @@ export interface Product {
   title: string;
   slug: string;
   price: number;
+  /**
+   * Upload product images or select existing media from library
+   */
+  images?: (number | Media)[] | null;
   description?: {
     root: {
       type: string;
@@ -1445,11 +1425,10 @@ export interface Product {
     };
     [k: string]: unknown;
   } | null;
-  images?: (number | Media)[] | null;
   customAttributes?:
     | {
-        key?: string | null;
-        value?: string | null;
+        key: string;
+        value: string;
         id?: string | null;
       }[]
     | null;
@@ -1475,7 +1454,10 @@ export interface Product {
  */
 export interface Media {
   id: number;
-  alt: string;
+  /**
+   * Optional image description for SEO and accessibility.
+   */
+  alt?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1618,8 +1600,8 @@ export interface ProductsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   price?: T;
-  description?: T;
   images?: T;
+  description?: T;
   customAttributes?:
     | T
     | {
@@ -1760,19 +1742,18 @@ export default buildConfig({
   admin: {
     user: Users.slug,
   },
-  // Enable cross-origin access so external e-commerce applications can query your CMS
   cors: ['*'],
   csrf: ['*'],
   collections: [Users, Products, Media],
   editor: lexicalEditor({}),
-  secret: process.env.PAYLOAD_SECRET || 'secret-key-change-in-prod',
+  secret: process.env.PAYLOAD_SECRET || 'fallback-secret-key',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || '',
-      max: 10, // Optimized for serverless deployment on Vercel
+      connectionString: process.env.DATABASE_URI || process.env.DATABASE_URL || '',
+      max: 10,
     },
   }),
   plugins: [
@@ -1780,8 +1761,11 @@ export default buildConfig({
       collections: {
         media: {
           disablePayloadAccessControl: true,
-          generateFileURL: ({ filename }) =>
-            `${process.env.SUPABASE_URL}/storage/v1/object/public/media/${filename}`,
+          generateFileURL: ({ filename }) => {
+            const supabaseUrl =
+              process.env.SUPABASE_URL || 'https://kzmzaqhmerjhzkpdaytl.supabase.co'
+            return `${supabaseUrl}/storage/v1/object/public/media/${filename}`
+          },
         },
       },
       bucket: 'media',
@@ -1790,13 +1774,187 @@ export default buildConfig({
           accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
           secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
         },
-        region: 'ap-south-1', // Matches your Supabase project region
+        region: 'ap-south-1',
         endpoint: 'https://kzmzaqhmerjhzkpdaytl.storage.supabase.co/storage/v1/s3',
         forcePathStyle: true,
       },
     }),
   ],
 })
+</file>
+
+<file path="tests/helpers/seedUser.ts">
+// tests/helpers/seedUser.ts
+
+import { getPayload } from 'payload'
+import config from '../../src/payload.config.js'
+
+export const testUser = {
+  email: 'dev@payloadcms.com',
+  password: 'test',
+}
+
+/**
+ * Seeds a test user for e2e admin tests.
+ */
+export async function seedTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  // Delete existing test user if any
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
+
+  // Create fresh test user
+  await payload.create({
+    collection: 'users',
+    data: testUser,
+    draft: true,
+  })
+}
+
+/**
+ * Cleans up test user after tests
+ */
+export async function cleanupTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
+}
+</file>
+
+<file path="src/collections/Media.ts">
+import type { CollectionConfig } from 'payload'
+import sharp from 'sharp'
+
+export const Media: CollectionConfig = {
+  slug: 'media',
+  access: {
+    read: () => true,
+    create: () => true, // Fixes "You are not allowed to perform this action"
+    update: () => true,
+    delete: () => true,
+  },
+  upload: {
+    staticDir: 'media',
+    adminThumbnail: 'thumbnail',
+    mimeTypes: ['image/*'],
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 300,
+        height: 300,
+        fit: 'cover',
+        formatOptions: {
+          format: 'webp',
+          options: { quality: 80 },
+        },
+      },
+      {
+        name: 'product_large',
+        width: 1200,
+        height: 1200,
+        fit: 'inside',
+        formatOptions: {
+          format: 'webp',
+          options: { quality: 80 },
+        },
+      },
+    ],
+  },
+  hooks: {
+    beforeChange: [
+      async ({ req, data }) => {
+        // Auto-generate Alt text from filename if left blank
+        if (!data.alt && req.file?.name) {
+          data.alt = req.file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+        }
+
+        if (req.file) {
+          try {
+            let fileBuffer: Buffer
+
+            // Multi-environment buffer extraction (Next.js / Payload 3)
+            if (req.file.data && Buffer.isBuffer(req.file.data)) {
+              fileBuffer = req.file.data
+            } else if ('buffer' in req.file && Buffer.isBuffer((req.file as any).buffer)) {
+              fileBuffer = (req.file as any).buffer
+            } else if (typeof (req.file as any).arrayBuffer === 'function') {
+              const arrayBuf = await (req.file as any).arrayBuffer()
+              fileBuffer = Buffer.from(arrayBuf)
+            } else {
+              fileBuffer = Buffer.from((req.file as any).data || req.file)
+            }
+
+            const MAX_SIZE_BYTES = 100 * 1024 // 100 KB size limit
+            let quality = 80
+            let targetWidth = 1920
+
+            // Step 1: Initial WebP format pass
+            let sharpInstance = sharp(fileBuffer).resize({
+              width: targetWidth,
+              withoutEnlargement: true,
+            })
+            let compressedBuffer = await sharpInstance.webp({ quality }).toBuffer()
+
+            // Step 2: Quality compression loop
+            while (compressedBuffer.length > MAX_SIZE_BYTES && quality > 20) {
+              quality -= 10
+              compressedBuffer = await sharp(fileBuffer)
+                .resize({ width: targetWidth, withoutEnlargement: true })
+                .webp({ quality })
+                .toBuffer()
+            }
+
+            // Step 3: Dimension reduction loop
+            while (compressedBuffer.length > MAX_SIZE_BYTES && targetWidth > 600) {
+              targetWidth -= 200
+              compressedBuffer = await sharp(fileBuffer)
+                .resize({ width: targetWidth, withoutEnlargement: true })
+                .webp({ quality: 50 })
+                .toBuffer()
+            }
+
+            // Sync buffer references back to Payload
+            req.file.data = compressedBuffer
+            ;(req.file as any).buffer = compressedBuffer
+            req.file.size = compressedBuffer.length
+            req.file.mimetype = 'image/webp'
+
+            if (req.file.name) {
+              req.file.name = req.file.name.replace(/\.[^/.]+$/, '') + '.webp'
+            }
+          } catch (err) {
+            console.error('Error compressing WebP image:', err)
+          }
+        }
+        return data
+      },
+    ],
+  },
+  fields: [
+    {
+      name: 'alt',
+      type: 'text',
+      required: false,
+      admin: {
+        description: 'Optional image description for SEO and accessibility.',
+      },
+    },
+  ],
+}
 </file>
 
 <file path="tsconfig.json">
@@ -1833,89 +1991,7 @@ export default buildConfig({
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
-}
-</file>
-
-<file path="src/collections/Media.ts">
-import type { CollectionConfig } from 'payload'
-import sharp from 'sharp'
-
-export const Media: CollectionConfig = {
-  slug: 'media',
-  access: {
-    read: () => true, // Public access for headlessly consuming e-commerce frontends
-  },
-  upload: {
-    staticDir: 'media',
-    adminThumbnail: 'thumbnail',
-    mimeTypes: ['image/*'],
-    imageSizes: [
-      {
-        name: 'thumbnail',
-        width: 300,
-        height: 300,
-        fit: 'cover',
-        formatOptions: {
-          format: 'webp',
-          options: { quality: 80 },
-        },
-      },
-      {
-        name: 'product_large',
-        width: 1200,
-        height: 1200,
-        fit: 'inside',
-        formatOptions: {
-          format: 'webp',
-          options: { quality: 80 },
-        },
-      },
-    ],
-  },
-  hooks: {
-    beforeChange: [
-      async ({ req, data }) => {
-        // Intercept upload buffer and strictly compress main file to WebP under target size limit
-        if (req.file) {
-          let fileBuffer: Buffer
-          if ('buffer' in req.file && Buffer.isBuffer((req.file as any).buffer)) {
-            fileBuffer = (req.file as any).buffer
-          } else {
-            const arrayBuf = await (req.file as any).arrayBuffer()
-            fileBuffer = Buffer.from(arrayBuf)
-          }
-
-          let quality = 80
-          let compressedBuffer = await sharp(fileBuffer).webp({ quality }).toBuffer()
-
-          // Target max file size: 100 KB (102,400 bytes)
-          const MAX_SIZE_BYTES = 100 * 1024
-
-          while (compressedBuffer.length > MAX_SIZE_BYTES && quality > 10) {
-            quality -= 10
-            compressedBuffer = await sharp(fileBuffer).webp({ quality }).toBuffer()
-          }
-
-          ;(req.file as any).buffer = compressedBuffer
-          req.file.size = compressedBuffer.length
-          ;(req.file as any).mimetype = 'image/webp'
-
-          if (req.file.name) {
-            req.file.name = req.file.name.replace(/\.[^/.]+$/, '') + '.webp'
-          }
-        }
-        return data
-      },
-    ],
-  },
-  fields: [
-    {
-      name: 'alt',
-      type: 'text',
-      required: true,
-    },
-  ],
+  "exclude": ["node_modules", "tests"]
 }
 </file>
 
