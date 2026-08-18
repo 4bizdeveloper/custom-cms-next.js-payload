@@ -1244,80 +1244,6 @@ export const importMap = {
 }
 </file>
 
-<file path="src/collections/Media.ts">
-import type { CollectionConfig } from 'payload'
-import sharp from 'sharp'
-
-export const Media: CollectionConfig = {
-  slug: 'media',
-  access: {
-    read: () => true, // Public access for headlessly consuming e-commerce frontends
-  },
-  upload: {
-    staticDir: 'media',
-    adminThumbnail: 'thumbnail',
-    mimeTypes: ['image/*'],
-    imageSizes: [
-      {
-        name: 'thumbnail',
-        width: 300,
-        height: 300,
-        fit: 'cover',
-        formatOptions: {
-          format: 'webp',
-          options: { quality: 80 },
-        },
-      },
-      {
-        name: 'product_large',
-        width: 1200,
-        height: 1200,
-        fit: 'inside',
-        formatOptions: {
-          format: 'webp',
-          options: { quality: 80 },
-        },
-      },
-    ],
-  },
-  hooks: {
-    beforeChange: [
-      async ({ req, data }) => {
-        // Intercept upload buffer and strictly compress main file to WebP under target size limit
-        if (req.file && req.file.buffer) {
-          let quality = 80
-          let compressedBuffer = await sharp(req.file.buffer).webp({ quality }).toBuffer()
-
-          // Target max file size: 100 KB (102,400 bytes)
-          const MAX_SIZE_BYTES = 100 * 1024
-
-          while (compressedBuffer.length > MAX_SIZE_BYTES && quality > 10) {
-            quality -= 10
-            compressedBuffer = await sharp(req.file.buffer).webp({ quality }).toBuffer()
-          }
-
-          req.file.buffer = compressedBuffer
-          req.file.size = compressedBuffer.length
-          req.file.mimetype = 'image/webp'
-
-          if (req.file.name) {
-            req.file.name = req.file.name.replace(/\.[^/.]+$/, '') + '.webp'
-          }
-        }
-        return data
-      },
-    ],
-  },
-  fields: [
-    {
-      name: 'alt',
-      type: 'text',
-      required: true,
-    },
-  ],
-}
-</file>
-
 <file path="src/collections/Users.ts">
 import type { CollectionConfig } from 'payload'
 
@@ -1873,6 +1799,126 @@ export default buildConfig({
 })
 </file>
 
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@payload-config": ["./src/payload.config.ts"]
+    },
+    "target": "ES2022"
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="src/collections/Media.ts">
+import type { CollectionConfig } from 'payload'
+import sharp from 'sharp'
+
+export const Media: CollectionConfig = {
+  slug: 'media',
+  access: {
+    read: () => true, // Public access for headlessly consuming e-commerce frontends
+  },
+  upload: {
+    staticDir: 'media',
+    adminThumbnail: 'thumbnail',
+    mimeTypes: ['image/*'],
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 300,
+        height: 300,
+        fit: 'cover',
+        formatOptions: {
+          format: 'webp',
+          options: { quality: 80 },
+        },
+      },
+      {
+        name: 'product_large',
+        width: 1200,
+        height: 1200,
+        fit: 'inside',
+        formatOptions: {
+          format: 'webp',
+          options: { quality: 80 },
+        },
+      },
+    ],
+  },
+  hooks: {
+    beforeChange: [
+      async ({ req, data }) => {
+        // Intercept upload buffer and strictly compress main file to WebP under target size limit
+        if (req.file) {
+          let fileBuffer: Buffer
+          if ('buffer' in req.file && Buffer.isBuffer((req.file as any).buffer)) {
+            fileBuffer = (req.file as any).buffer
+          } else {
+            const arrayBuf = await (req.file as any).arrayBuffer()
+            fileBuffer = Buffer.from(arrayBuf)
+          }
+
+          let quality = 80
+          let compressedBuffer = await sharp(fileBuffer).webp({ quality }).toBuffer()
+
+          // Target max file size: 100 KB (102,400 bytes)
+          const MAX_SIZE_BYTES = 100 * 1024
+
+          while (compressedBuffer.length > MAX_SIZE_BYTES && quality > 10) {
+            quality -= 10
+            compressedBuffer = await sharp(fileBuffer).webp({ quality }).toBuffer()
+          }
+
+          ;(req.file as any).buffer = compressedBuffer
+          req.file.size = compressedBuffer.length
+          ;(req.file as any).mimetype = 'image/webp'
+
+          if (req.file.name) {
+            req.file.name = req.file.name.replace(/\.[^/.]+$/, '') + '.webp'
+          }
+        }
+        return data
+      },
+    ],
+  },
+  fields: [
+    {
+      name: 'alt',
+      type: 'text',
+      required: true,
+    },
+  ],
+}
+</file>
+
 <file path="package.json">
 {
   "name": "my-ecommerce-cms",
@@ -1881,7 +1927,7 @@ export default buildConfig({
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=12288\" next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
@@ -1925,7 +1971,7 @@ export default buildConfig({
     "vitest": "4.0.18"
   },
   "engines": {
-    "node": "^18.20.2 || >=20.9.0",
+    "node": ">=20.9.0",
     "pnpm": "^9 || ^10 || ^11"
   },
   "pnpm": {
@@ -1935,44 +1981,6 @@ export default buildConfig({
       "unrs-resolver"
     ]
   }
-}
-</file>
-
-<file path="tsconfig.json">
-{
-  "compilerOptions": {
-    "ignoreDeprecations": "5.0",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"],
-      "@payload-config": ["./src/payload.config.ts"]
-    },
-    "target": "ES2022"
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": ["node_modules"]
 }
 </file>
 
