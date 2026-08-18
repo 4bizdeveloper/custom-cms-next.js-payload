@@ -1,3 +1,5 @@
+// tests/helpers/seedUser.ts
+
 import { getPayload } from 'payload'
 import config from '../../src/payload.config.js'
 
@@ -26,6 +28,7 @@ export async function seedTestUser(): Promise<void> {
   await payload.create({
     collection: 'users',
     data: testUser,
+    draft: true,
   })
 }
 
