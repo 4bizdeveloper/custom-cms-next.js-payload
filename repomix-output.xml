@@ -1091,6 +1091,84 @@ export const importMap = {
 }
 </file>
 
+<file path="src/collections/Users.ts">
+import type { CollectionConfig } from 'payload'
+
+export const Users: CollectionConfig = {
+  slug: 'users',
+  auth: {
+    useAPIKey: true, // Enables header-based API Key authentication for external platforms
+  },
+  admin: {
+    useAsTitle: 'email',
+  },
+  fields: [
+    {
+      name: 'role',
+      type: 'select',
+      options: [
+        { label: 'Admin', value: 'admin' },
+        { label: 'Store Manager', value: 'manager' },
+      ],
+      defaultValue: 'manager',
+      required: true,
+    },
+  ],
+}
+</file>
+
+<file path="tests/helpers/seedUser.ts">
+// tests/helpers/seedUser.ts
+
+import { getPayload } from 'payload'
+import config from '../../src/payload.config.js'
+
+export const testUser = {
+  email: 'dev@payloadcms.com',
+  password: 'test',
+}
+
+/**
+ * Seeds a test user for e2e admin tests.
+ */
+export async function seedTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  // Delete existing test user if any
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
+
+  // Create fresh test user
+  await payload.create({
+    collection: 'users',
+    data: testUser,
+    draft: true,
+  })
+}
+
+/**
+ * Cleans up test user after tests
+ */
+export async function cleanupTestUser(): Promise<void> {
+  const payload = await getPayload({ config })
+
+  await payload.delete({
+    collection: 'users',
+    where: {
+      email: {
+        equals: testUser.email,
+      },
+    },
+  })
+}
+</file>
+
 <file path="src/collections/Products.ts">
 import type { CollectionConfig } from 'payload'
 
@@ -1098,7 +1176,8 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['images', 'title', 'slug', 'price', 'updatedAt'], // Added 'images' column
+    // Order: Title (clickable to product), Images (not clickable), Price, Slug, Updated At
+    defaultColumns: ['title', 'images', 'price', 'slug', 'updatedAt'],
   },
   access: {
     read: () => true,
@@ -1219,84 +1298,6 @@ export const Products: CollectionConfig = {
       ],
     },
   ],
-}
-</file>
-
-<file path="src/collections/Users.ts">
-import type { CollectionConfig } from 'payload'
-
-export const Users: CollectionConfig = {
-  slug: 'users',
-  auth: {
-    useAPIKey: true, // Enables header-based API Key authentication for external platforms
-  },
-  admin: {
-    useAsTitle: 'email',
-  },
-  fields: [
-    {
-      name: 'role',
-      type: 'select',
-      options: [
-        { label: 'Admin', value: 'admin' },
-        { label: 'Store Manager', value: 'manager' },
-      ],
-      defaultValue: 'manager',
-      required: true,
-    },
-  ],
-}
-</file>
-
-<file path="tests/helpers/seedUser.ts">
-// tests/helpers/seedUser.ts
-
-import { getPayload } from 'payload'
-import config from '../../src/payload.config.js'
-
-export const testUser = {
-  email: 'dev@payloadcms.com',
-  password: 'test',
-}
-
-/**
- * Seeds a test user for e2e admin tests.
- */
-export async function seedTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  // Delete existing test user if any
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
-
-  // Create fresh test user
-  await payload.create({
-    collection: 'users',
-    data: testUser,
-    draft: true,
-  })
-}
-
-/**
- * Cleans up test user after tests
- */
-export async function cleanupTestUser(): Promise<void> {
-  const payload = await getPayload({ config })
-
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
 }
 </file>
 

@@ -16,8 +16,19 @@ export default buildConfig({
   admin: {
     user: Users.slug,
   },
-  cors: ['*'],
-  csrf: ['*'],
+  // Use explicit allowed origins or a plain string '*'
+  cors: [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ],
+  csrf: [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ],
   collections: [Users, Products, Media],
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET || 'fallback-secret-key',
@@ -33,14 +44,7 @@ export default buildConfig({
   plugins: [
     s3Storage({
       collections: {
-        media: {
-          disablePayloadAccessControl: true,
-          generateFileURL: ({ filename }) => {
-            const supabaseUrl =
-              process.env.SUPABASE_URL || 'https://kzmzaqhmerjhzkpdaytl.supabase.co'
-            return `${supabaseUrl}/storage/v1/object/public/media/${filename}`
-          },
-        },
+        media: true,
       },
       bucket: 'media',
       config: {
