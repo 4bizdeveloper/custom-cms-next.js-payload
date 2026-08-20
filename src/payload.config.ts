@@ -39,6 +39,9 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || process.env.DATABASE_URL || '',
       max: 10,
+      ssl: {
+        rejectUnauthorized: true,
+      },
     },
   }),
   plugins: [
